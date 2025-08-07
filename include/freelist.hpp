@@ -1,14 +1,3 @@
-/**
- * @file FreeListAllocator.h
- * @brief A high-performance memory allocator using segregated free lists
- *
- * This allocator provides efficient memory management with support for:
- * - Small allocations from segregated free lists
- * - Large allocations via system malloc
- * - Configurable block sizes and alignment
- * - Memory pooling and coalescing
- */
-
 #pragma once
 
 #include <algorithm>
@@ -52,7 +41,7 @@ namespace memory {
      * @param alignment Required alignment (must be power of two)
      * @return true if pointer is properly aligned
      */
-    [[nodiscard]] static bool is_aligned(void* ptr, size_t alignment) noexcept {
+    [[nodiscard]] constexpr static bool is_aligned(void* ptr, size_t alignment) noexcept {
         return alignment == 0 || (reinterpret_cast<uintptr_t>(ptr) % alignment == 0);
     }
 
@@ -68,35 +57,35 @@ namespace memory {
     /**
      * @brief Bitwise OR operator for BlockFlags
      */
-    inline BlockFlags operator|(BlockFlags a, BlockFlags b) {
+    constexpr inline BlockFlags operator|(BlockFlags a, BlockFlags b) {
         return static_cast<BlockFlags>(std::to_underlying(a) | std::to_underlying(b));
     }
 
     /**
      * @brief Bitwise AND operator for BlockFlags
      */
-    inline BlockFlags operator&(BlockFlags a, BlockFlags b) {
+    constexpr inline BlockFlags operator&(BlockFlags a, BlockFlags b) {
         return static_cast<BlockFlags>(std::to_underlying(a) & std::to_underlying(b));
     }
 
     /**
      * @brief Bitwise NOT operator for BlockFlags
      */
-    inline BlockFlags operator~(BlockFlags a) {
+    constexpr inline BlockFlags operator~(BlockFlags a) {
         return static_cast<BlockFlags>(~std::to_underlying(a));
     }
 
     /**
      * @brief Bitwise XOR operator for BlockFlags
      */
-    inline BlockFlags operator^(BlockFlags a, BlockFlags b) {
+    constexpr inline BlockFlags operator^(BlockFlags a, BlockFlags b) {
         return static_cast<BlockFlags>(std::to_underlying(a) ^ std::to_underlying(b));
     }
 
     /**
      * @brief Bitwise AND assignment for BlockFlags
      */
-    inline BlockFlags& operator&=(BlockFlags& a, BlockFlags b) {
+    constexpr inline BlockFlags& operator&=(BlockFlags& a, BlockFlags b) {
         a = a & b;
         return a;
     }
@@ -104,7 +93,7 @@ namespace memory {
     /**
      * @brief Bitwise XOR assignment for BlockFlags
      */
-    inline BlockFlags& operator^=(BlockFlags& a, BlockFlags b) {
+    constexpr inline BlockFlags& operator^=(BlockFlags& a, BlockFlags b) {
         a = a ^ b;
         return a;
     }
@@ -112,7 +101,7 @@ namespace memory {
     /**
      * @brief Bitwise OR assignment for BlockFlags
      */
-    inline BlockFlags& operator|=(BlockFlags& a, BlockFlags b) {
+    constexpr inline BlockFlags& operator|=(BlockFlags& a, BlockFlags b) {
         a = a | b;
         return a;
     }
@@ -123,7 +112,7 @@ namespace memory {
      * @param flag Flag to test for
      * @return true if flag is set
      */
-    inline bool has_flag(BlockFlags flags, BlockFlags flag) {
+    constexpr inline bool has_flag(BlockFlags flags, BlockFlags flag) {
         return (flags & flag) != BlockFlags::None;
     }
 
@@ -154,7 +143,7 @@ namespace memory {
              * @brief Check if block is free
              * @return true if block is free
              */
-            [[nodiscard]] bool is_free() const noexcept {
+            [[nodiscard]] constexpr bool is_free() const noexcept {
                 return has_flag(flags, BlockFlags::Free);
             }
 
@@ -162,7 +151,7 @@ namespace memory {
              * @brief Check if block is large allocation
              * @return true if large allocation
              */
-            [[nodiscard]] bool is_large() const noexcept {
+            [[nodiscard]] constexpr bool is_large() const noexcept {
                 return has_flag(flags, BlockFlags::Large);
             }
 
@@ -170,13 +159,15 @@ namespace memory {
              * @brief Get alignment requirement
              * @return Alignment value (always power of two)
              */
-            [[nodiscard]] size_t alignment() const noexcept { return size_t(1) << alignment_shift; }
+            [[nodiscard]] constexpr size_t alignment() const noexcept {
+                return size_t(1) << alignment_shift;
+            }
 
             /**
              * @brief Get pointer to user memory
              * @return Pointer to usable memory
              */
-            [[nodiscard]] void* get_user_ptr() noexcept {
+            [[nodiscard]] constexpr void* get_user_ptr() noexcept {
                 return static_cast<void*>(reinterpret_cast<std::byte*>(this) + sizeof(BlockHeader) +
                                           sizeof(void*));
             }
@@ -186,7 +177,7 @@ namespace memory {
              * @param ptr User memory pointer
              * @return Corresponding BlockHeader
              */
-            [[nodiscard]] static BlockHeader* from_user_ptr(void* ptr) noexcept {
+            [[nodiscard]] constexpr static BlockHeader* from_user_ptr(void* ptr) noexcept {
                 return reinterpret_cast<BlockHeader*>(reinterpret_cast<std::byte*>(ptr) -
                                                       sizeof(BlockHeader) - sizeof(void*));
             }
@@ -199,14 +190,15 @@ namespace memory {
              * @param flags Initial flags
              * @return Pointer to created header
              */
-            static BlockHeader* create(void* location, size_t size, size_t align,
-                                       BlockFlags flags) {
+            constexpr static BlockHeader* create(void* location, size_t size, size_t align,
+                                                 BlockFlags flags) {
                 auto* header = new (location)
                     BlockHeader{.magic = MAGIC,
                                 .size = size,
                                 .alignment_shift = static_cast<size_t>(std::countr_zero(align)),
                                 .flags = flags,
                                 .next = nullptr};
+
                 return header;
             }
         };
@@ -218,16 +210,18 @@ namespace memory {
             void* memory = nullptr;  ///< Base pointer to allocated memory
             size_t size = 0;  ///< Total size of pool
 
-            MemoryPool() = default;
+            constexpr MemoryPool() = default;
 
             /**
              * @brief Construct a new MemoryPool of given size
              * @param sz Size in bytes
              */
-            explicit MemoryPool(size_t sz) : memory(std::malloc(sz)), size(sz) {}
+            constexpr explicit MemoryPool(size_t sz) : memory(std::malloc(sz)), size(sz) {}
 
             ~MemoryPool() {
-                if (memory) std::free(memory);
+                if (memory) {
+                    std::free(memory);
+                }
             }
 
             MemoryPool(MemoryPool&& other) noexcept :
@@ -242,15 +236,15 @@ namespace memory {
                 return *this;
             }
 
-            MemoryPool(const MemoryPool&) = delete;
-            MemoryPool& operator=(const MemoryPool&) = delete;
+            constexpr MemoryPool(const MemoryPool&) = delete;
+            constexpr MemoryPool& operator=(const MemoryPool&) = delete;
 
             /**
              * @brief Check if pointer belongs to this pool
              * @param ptr Pointer to check
              * @return true if pointer is within pool
              */
-            [[nodiscard]] bool contains(const void* ptr) const noexcept {
+            [[nodiscard]] constexpr bool contains(const void* ptr) const noexcept {
                 auto* base = static_cast<const std::byte*>(memory);
                 auto* p = static_cast<const std::byte*>(ptr);
                 return p >= base && p < (base + size);
@@ -260,7 +254,7 @@ namespace memory {
              * @brief Get pool memory as byte span
              * @return Span covering pool memory
              */
-            [[nodiscard]] std::span<std::byte> as_span() const noexcept {
+            [[nodiscard]] constexpr std::span<std::byte> as_span() const noexcept {
                 return {static_cast<std::byte*>(memory), size};
             }
         };
@@ -272,7 +266,7 @@ namespace memory {
             void* base_ptr = nullptr;  ///< Original allocated pointer
             BlockHeader* header = nullptr;  ///< Associated header
 
-            LargeAlloc() = default;
+            constexpr LargeAlloc() = default;
 
             /**
              * @brief Construct a new LargeAlloc
@@ -318,7 +312,7 @@ namespace memory {
          * @param size Requested size
          * @return Size class index
          */
-        [[nodiscard]] size_t size_class(size_t size) const noexcept {
+        [[nodiscard]] constexpr size_t size_class(size_t size) const noexcept {
             size_t clamped = std::clamp(size, m_config.min_block_size, m_config.max_block_size);
             return std::bit_width(clamped) - std::bit_width(m_config.min_block_size);
         }
@@ -328,7 +322,7 @@ namespace memory {
          * @param size Pool size in bytes
          * @return true if pool was allocated successfully
          */
-        bool grow_pool(size_t size) {
+        constexpr bool grow_pool(size_t size) {
             size = std::max(size, m_config.initial_pool_size);
             MemoryPool pool(size);
             if (!pool.memory) {
@@ -356,8 +350,8 @@ namespace memory {
          * @param requested_size Requested allocation size
          * @return Allocated pointer or nullptr
          */
-        void* try_allocate_from_size_class(size_t sc, size_t align,
-                                           size_t requested_size) noexcept {
+        constexpr void* try_allocate_from_size_class(size_t sc, size_t align,
+                                                     size_t requested_size) noexcept {
             BlockHeader** pprev = &m_free_lists[sc];
             while (*pprev) {
                 BlockHeader* header = *pprev;
@@ -432,7 +426,7 @@ namespace memory {
          * @brief Merge adjacent free blocks
          * @param header Block to coalesce with neighbors
          */
-        void coalesce(BlockHeader* header) noexcept {
+        constexpr void coalesce(BlockHeader* header) noexcept {
             std::byte* next_ptr =
                 reinterpret_cast<std::byte*>(header) + sizeof(BlockHeader) + header->size;
 
@@ -455,7 +449,7 @@ namespace memory {
          * @brief Remove block from its free list
          * @param header Block to remove
          */
-        void remove_from_free_list(BlockHeader* header) noexcept {
+        constexpr void remove_from_free_list(BlockHeader* header) noexcept {
             if (header->is_large()) {
                 return;
             }
@@ -474,7 +468,7 @@ namespace memory {
          * @brief Construct a new FreeListAllocator
          * @param config Allocator configuration
          */
-        explicit FreeListAllocator(AllocatorConfig config = {}) : m_config(config) {
+        constexpr explicit FreeListAllocator(AllocatorConfig config = {}) : m_config(config) {
             grow_pool(m_config.initial_pool_size);
         }
 
@@ -578,7 +572,7 @@ namespace memory {
         /**
          * @brief Release all allocated memory
          */
-        void release_all() noexcept {
+        constexpr void release_all() noexcept {
             m_pools.clear();
             m_free_lists.fill(nullptr);
             m_large_allocs.clear();
@@ -590,25 +584,29 @@ namespace memory {
          * @brief Get total allocated bytes
          * @return Bytes currently allocated
          */
-        [[nodiscard]] size_t allocated_bytes() const noexcept { return m_allocated_bytes; }
+        [[nodiscard]] constexpr size_t allocated_bytes() const noexcept {
+            return m_allocated_bytes;
+        }
 
         /**
          * @brief Get total capacity in bytes
          * @return Total capacity including free memory
          */
-        [[nodiscard]] size_t capacity_bytes() const noexcept { return m_capacity_bytes; }
+        [[nodiscard]] constexpr size_t capacity_bytes() const noexcept { return m_capacity_bytes; }
 
         /**
          * @brief Get allocator configuration
          * @return Current configuration
          */
-        [[nodiscard]] const AllocatorConfig& config() const noexcept { return m_config; }
+        [[nodiscard]] constexpr const AllocatorConfig& config() const noexcept { return m_config; }
 
         /**
          * @brief Get memory pools
          * @return Span of memory pools
          */
-        [[nodiscard]] std::span<const MemoryPool> memory_pools() const noexcept { return m_pools; }
+        [[nodiscard]] constexpr std::span<const MemoryPool> memory_pools() const noexcept {
+            return m_pools;
+        }
 
     private:
         /**
