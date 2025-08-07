@@ -2,15 +2,17 @@
 
 #include "catch_amalgamated.hpp"
 
+using namespace memory;
+
 TEST_CASE("StackArena basic functionality", "[arena]") {
     constexpr size_t arena_size = 1024;
-    auto arena = memory::make_stack_arena<arena_size>();
+    auto arena = make_stack_arena<arena_size>();
 
     SECTION("Initial state") {
         REQUIRE(arena.get_capacity() == arena_size);
         REQUIRE(arena.used() == 0);
         REQUIRE(arena.available() == arena_size);
-        REQUIRE(arena.stats() == nullptr);  // Stats not tracked by default
+        REQUIRE(arena.stats() == nullptr);
     }
 
     SECTION("Simple allocation") {
@@ -25,19 +27,19 @@ TEST_CASE("StackArena basic functionality", "[arena]") {
     SECTION("Allocation too large") {
         auto alloc = arena.allocate(arena_size + 1);
         REQUIRE_FALSE(alloc.has_value());
-        REQUIRE(alloc.error() == memory::AllocError::OutOfMemory);
+        REQUIRE(alloc.error() == AllocError::OutOfMemory);
     }
 
     SECTION("Zero-sized allocation") {
         auto alloc = arena.allocate(0);
         REQUIRE_FALSE(alloc.has_value());
-        REQUIRE(alloc.error() == memory::AllocError::InvalidSize);
+        REQUIRE(alloc.error() == AllocError::InvalidSize);
     }
 
     SECTION("Invalid alignment") {
-        auto alloc = arena.allocate(64, 3);  // 3 is not a power of two
+        auto alloc = arena.allocate(64, 3);
         REQUIRE_FALSE(alloc.has_value());
-        REQUIRE(alloc.error() == memory::AllocError::InvalidAlignment);
+        REQUIRE(alloc.error() == AllocError::InvalidAlignment);
     }
 
     SECTION("Type-safe allocation") {
@@ -45,6 +47,7 @@ TEST_CASE("StackArena basic functionality", "[arena]") {
             int x;
             float y;
         };
+
         auto* obj = arena.make<TestStruct>(42, 3.14f);
         REQUIRE(obj != nullptr);
         REQUIRE(obj->x == 42);
@@ -56,29 +59,26 @@ TEST_CASE("StackArena basic functionality", "[arena]") {
     }
 
     SECTION("Alignment strategies") {
-        memory::Config strict_config =
-            memory::Config{}.with_alignment_strategy(memory::AlignmentStrategy::Strict);
-        auto strict_arena = memory::make_stack_arena<arena_size>(strict_config);
+        auto config = Config{};
+        auto strict_config = config.with_alignment_strategy(AlignmentStrategy::Strict);
+        auto strict_arena = make_stack_arena<arena_size>(strict_config);
 
-        // Test strict alignment with a large alignment requirement
         auto alloc = strict_arena.allocate(64, 64);
         REQUIRE(alloc.has_value());
         REQUIRE(reinterpret_cast<uintptr_t>(alloc->ptr) % 64 == 0);
 
-        memory::Config packed_config =
-            memory::Config{}.with_alignment_strategy(memory::AlignmentStrategy::Packed);
-        auto packed_arena = memory::make_stack_arena<arena_size>(packed_config);
+        config = Config{};
+        auto packed_config = config.with_alignment_strategy(AlignmentStrategy::Packed);
+        auto packed_arena = make_stack_arena<arena_size>(packed_config);
 
-        // Packed should use minimal alignment
         alloc = packed_arena.allocate(64);
         REQUIRE(alloc.has_value());
         REQUIRE(reinterpret_cast<uintptr_t>(alloc->ptr) % alignof(std::max_align_t) == 0);
     }
 
     SECTION("Statistics tracking") {
-        auto stats_arena =
-            memory::make_stack_arena<arena_size>(memory::Config{}.with_statstracking(true));
-
+        auto config = Config{};
+        auto stats_arena = make_stack_arena<arena_size>(config.with_statstracking(true));
         auto alloc1 = stats_arena.allocate(64);
         auto alloc2 = stats_arena.allocate(128);
 
@@ -91,8 +91,9 @@ TEST_CASE("StackArena basic functionality", "[arena]") {
     }
 
     SECTION("Debug tags") {
-        auto debug_arena = memory::make_stack_arena<arena_size>(
-            memory::Config{}.with_debug_checks(true).with_statstracking(true));
+        auto config = Config{};
+        auto debug_arena =
+            make_stack_arena<arena_size>(config.with_debug_checks(true).with_statstracking(true));
 
         auto alloc1 = debug_arena.allocate(64, 8, "TestAllocation");
         auto alloc2 = debug_arena.allocate(128, 16, "AnotherAllocation");
@@ -103,7 +104,7 @@ TEST_CASE("StackArena basic functionality", "[arena]") {
     }
 
     SECTION("Reset behavior") {
-        auto arena = memory::make_stack_arena<arena_size>();
+        auto arena = make_stack_arena<arena_size>();
         auto alloc = arena.allocate(256);
         REQUIRE(arena.used() == 256);
 
@@ -113,10 +114,8 @@ TEST_CASE("StackArena basic functionality", "[arena]") {
     }
 
     SECTION("Memory poisoning") {
-        auto arena = memory::make_stack_arena<arena_size>(
-            memory::Config{}
-                .with_init_policy(memory::InitPolicy::DebugPattern)
-                .with_debug_checks(true));
+        auto arena = make_stack_arena<arena_size>(
+            Config{}.with_init_policy(InitPolicy::DebugPattern).with_debug_checks(true));
 
         auto alloc = arena.allocate(64);
         auto* byte_ptr = static_cast<std::byte*>(alloc->ptr);

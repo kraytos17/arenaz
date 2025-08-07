@@ -1,7 +1,6 @@
-#include <print>
-#include <stacktrace>
+#include <iostream>
 
 int main() {
-    std::println("Hello, from arenaz!");
-    std::stacktrace_entry s;
+    std::cout << "Hello from arenaz main application!" << std::endl;
+    return 0;
 }

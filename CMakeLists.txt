@@ -9,8 +9,6 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_DEBUG_POSTFIX "-d")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-enable_testing()
-
 set(CATCH_HPP_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/catch_amalgamated.hpp)
 set(CATCH_CPP_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/catch_amalgamated.cpp)
 
@@ -28,10 +26,16 @@ if(NOT EXISTS ${CATCH_HPP_PATH})
         SHOW_PROGRESS)
 endif()
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_executable(arenaz
-    src/catch_amalgamated.cpp
-    src/arena_test.cpp
+    src/main.cpp
 )
 
-target_include_directories(arenaz PRIVATE ${CMAKE_SOURCE_DIR}/src)
-add_test(NAME arenaz COMMAND arenaz)
+add_executable(arenaz_tests
+    ${CATCH_CPP_PATH}
+    src/arena_test.cpp
+    src/freelist_test.cpp
+)
+
+enable_testing()
+add_test(NAME AllTests COMMAND arenaz_tests)
