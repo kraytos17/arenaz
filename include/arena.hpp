@@ -259,12 +259,38 @@ namespace memory {
             if (!obj) {
                 return;
             }
-            if constexpr (!std::is_trivially_destructible_v<T>) {
-                obj->~T();
+
+            if (m_config.debug_checks) {
+                if (!owns(obj)) {
+                    std::println(stderr,
+                                 "Warning: StackArena<{}, {}>::destroy called on invalid or "
+                                 "non-owned pointer\n  Location: {}:{}",
+                                 SIZE,
+                                 ALIGNMENT,
+                                 m_config.creation_location.file_name(),
+                                 m_config.creation_location.line());
+                    return;
+                }
+
+                auto* bytes = reinterpret_cast<std::byte*>(obj);
+                if (ranges::all_of(std::span{bytes, sizeof(T)},
+                                   [](std::byte b) { return b == std::byte{0xFD}; })) {
+                    std::println(stderr,
+                                 "Warning: StackArena<{}, {}>::destroy called twice on same object",
+                                 SIZE,
+                                 ALIGNMENT);
+                    return;
+                }
             }
+
+            if constexpr (!std::is_trivially_destructible_v<T>) {
+                std::destroy_at(obj);
+            }
+
             if (m_config.debug_checks) {
                 poison_memory(obj, sizeof(T), std::byte{0xFD});
             }
+
             if (m_stats) {
                 m_stats->deallocation_count++;
             }
