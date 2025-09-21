@@ -1,8 +1,8 @@
-#include "../include/arena.hpp"
+#include "arena.hpp"
 
 #include "catch_amalgamated.hpp"
 
-using namespace memory;
+using namespace arenaz;
 
 TEST_CASE("StackArena basic functionality", "[arena]") {
     constexpr size_t arena_size = 1024;
@@ -209,6 +209,7 @@ TEST_CASE("StackArena basic functionality", "[arena]") {
         auto* obj = arena.make<int>(123);
 
         arena.destroy(obj);
+        // Expected warning here:
         REQUIRE_NOTHROW(arena.destroy(obj));
 
         const auto* stats = arena.stats();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <bit>
 #include <cassert>
 #include <cstddef>
@@ -13,10 +14,9 @@
 #include <unordered_map>
 #include <utility>
 
-#define _DEBUG 1
 namespace ranges = std::ranges;
 
-namespace memory {
+namespace arenaz {
     /// @brief Memory initialization policy for the arena
     enum class InitPolicy : uint8_t {
         Uninitialized,  ///< Leave memory as-is (fastest but potentially unsafe)
@@ -127,8 +127,8 @@ namespace memory {
 
         /// @brief Construct a StackArena with configuration
         /// @param config Configuration for arena behavior
-        explicit StackArena(Config config = {}) :
-            m_config(std::move(config)),
+        explicit StackArena(Config config = {})
+          : m_config(std::move(config)),
             m_stats(m_config.track_stats ? std::make_optional<Stats>() : std::nullopt) {
             if (m_config.debug_checks) {
                 poison_memory(m_buffer, SIZE, std::byte{0xAA});
@@ -220,7 +220,7 @@ namespace memory {
 
             m_offset = 0;
             if (m_stats) {
-                *m_stats = Stats{};
+                m_stats.value() = Stats{};
             }
         }
 
@@ -243,8 +243,9 @@ namespace memory {
             if (!alloc) {
                 return nullptr;
             }
+
             try {
-                return new (alloc->ptr) T(std::forward<Args>(args)...);
+                return std::construct_at(static_cast<T*>(alloc->ptr), std::forward<Args>(args)...);
             } catch (...) {
                 m_offset -= alloc->size;
                 return nullptr;
@@ -274,7 +275,7 @@ namespace memory {
 
                 auto* bytes = reinterpret_cast<std::byte*>(obj);
                 if (ranges::all_of(std::span{bytes, sizeof(T)},
-                                   [](std::byte b) { return b == std::byte{0xFD}; })) {
+                                   [](const std::byte b) { return b == std::byte{0xFD}; })) {
                     std::println(stderr,
                                  "Warning: StackArena<{}, {}>::destroy called twice on same object",
                                  SIZE,
@@ -306,6 +307,7 @@ namespace memory {
             std::println("  Used: {} bytes ({:.1f}%)",
                          m_stats->total_allocated,
                          100.0 * m_stats->total_allocated / SIZE);
+
             std::println("  Peak Usage: {} bytes", m_stats->peak_usage);
             std::println("  Active Allocations: {}", m_stats->active_allocations());
             std::println("  Buffer Alignment: {} bytes", ALIGNMENT);
@@ -331,7 +333,7 @@ namespace memory {
         }
 
     private:
-        alignas(ALIGNMENT) std::byte m_buffer[SIZE];  ///< Backing memory buffer
+        alignas(ALIGNMENT) std::array<std::byte, SIZE> m_buffer;  ///< Backing memory buffer
         size_t m_offset = 0;  ///< Current allocation offset
         Config m_config;  ///< Configuration
         std::optional<Stats> m_stats;  ///< Optional statistics
@@ -445,4 +447,4 @@ namespace memory {
     [[nodiscard]] constexpr auto make_stack_arena(Config config = {}) {
         return StackArena<SIZE, ALIGNMENT>{std::move(config)};
     }
-}  // namespace memory
+}  // namespace arenaz

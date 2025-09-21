@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-namespace memory {
+namespace arenaz {
     /**
      * @brief Error codes for memory allocation operations
      */
@@ -229,7 +229,10 @@ namespace memory {
 
             MemoryPool& operator=(MemoryPool&& other) noexcept {
                 if (this != &other) {
-                    if (memory) std::free(memory);
+                    if (memory) {
+                        std::free(memory);
+                    }
+                    
                     memory = std::exchange(other.memory, nullptr);
                     size = std::exchange(other.size, 0);
                 }
@@ -635,4 +638,4 @@ namespace memory {
             return allocate_small(size, align);
         }
     };
-}  // namespace memory
+}  // namespace arenaz

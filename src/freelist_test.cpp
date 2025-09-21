@@ -1,8 +1,8 @@
-#include "../include/freelist.hpp"
+#include "freelist.hpp"
 
 #include "catch_amalgamated.hpp"
 
-using namespace memory;
+using namespace arenaz;
 
 TEST_CASE("FreeListAllocator basic functionality", "[freelist]") {
     FreeListAllocator allocator;

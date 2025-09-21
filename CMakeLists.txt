@@ -26,15 +26,26 @@ if(NOT EXISTS ${CATCH_HPP_PATH})
         SHOW_PROGRESS)
 endif()
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_executable(arenaz
     src/main.cpp
+)
+
+target_include_directories(arenaz
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 add_executable(arenaz_tests
     ${CATCH_CPP_PATH}
     src/arena_test.cpp
     src/freelist_test.cpp
+)
+
+target_include_directories(arenaz_tests
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 enable_testing()
