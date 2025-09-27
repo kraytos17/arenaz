@@ -131,7 +131,7 @@ namespace arenaz {
           : m_config(std::move(config)),
             m_stats(m_config.track_stats ? std::make_optional<Stats>() : std::nullopt) {
             if (m_config.debug_checks) {
-                poison_memory(m_buffer, SIZE, std::byte{0xAA});
+                poison_memory(m_buffer.data(), SIZE, std::byte{0xAA});
             }
         }
 
@@ -172,7 +172,7 @@ namespace arenaz {
                 return std::unexpected(AllocError::OutOfMemory);
             }
 
-            void* ptr = m_buffer + aligned_offset;
+            void* ptr = m_buffer.data() + aligned_offset;
             m_offset = aligned_offset + size;
 
             maybe_initialize(ptr, size);
@@ -209,10 +209,10 @@ namespace arenaz {
 
             switch (policy) {
                 case InitPolicy::Zeroed:
-                    poison_memory(m_buffer, SIZE, std::byte{0});
+                    poison_memory(m_buffer.data(), SIZE, std::byte{0});
                     break;
                 case InitPolicy::DebugPattern:
-                    poison_memory(m_buffer, SIZE, std::byte{0xAA});
+                    poison_memory(m_buffer.data(), SIZE, std::byte{0xAA});
                     break;
                 case InitPolicy::Uninitialized:
                     break;
@@ -224,11 +224,10 @@ namespace arenaz {
             }
         }
 
-        // Getters
         [[nodiscard]] constexpr size_t used() const noexcept { return m_offset; }
-        [[nodiscard]] constexpr size_t get_capacity() const noexcept { return SIZE; }
-        [[nodiscard]] constexpr size_t available() const noexcept { return SIZE - m_offset; }
-        [[nodiscard]] constexpr size_t get_alignment() const noexcept { return ALIGNMENT; }
+        [[nodiscard]] constexpr size_t get_capacity() const noexcept { return capacity; }
+        [[nodiscard]] constexpr size_t available() const noexcept { return capacity - m_offset; }
+        [[nodiscard]] constexpr size_t get_alignment() const noexcept { return buffer_alignment; }
         [[nodiscard]] const Stats* stats() const noexcept { return m_stats ? &*m_stats : nullptr; }
 
         /// @brief Construct an object in the arena
@@ -260,7 +259,6 @@ namespace arenaz {
             if (!obj) {
                 return;
             }
-
             if (m_config.debug_checks) {
                 if (!owns(obj)) {
                     std::println(stderr,
@@ -283,15 +281,12 @@ namespace arenaz {
                     return;
                 }
             }
-
             if constexpr (!std::is_trivially_destructible_v<T>) {
                 std::destroy_at(obj);
             }
-
             if (m_config.debug_checks) {
                 poison_memory(obj, sizeof(T), std::byte{0xFD});
             }
-
             if (m_stats) {
                 m_stats->deallocation_count++;
             }
@@ -302,6 +297,7 @@ namespace arenaz {
             if (!m_stats) {
                 return;
             }
+
             std::println("StackArena<{}, {}> Statistics:", SIZE, ALIGNMENT);
             std::println("  Capacity: {} bytes", SIZE);
             std::println("  Used: {} bytes ({:.1f}%)",
@@ -319,14 +315,14 @@ namespace arenaz {
             }
         }
 
-        [[nodiscard]] const void* buffer_address() const noexcept { return m_buffer; }
+        [[nodiscard]] const void* buffer_address() const noexcept { return m_buffer.data(); }
 
         /// @brief Check if pointer belongs to this arena
         /// @param ptr Pointer to check
         /// @return True if pointer is within arena's memory range
         [[nodiscard]] bool owns(const void* ptr) const noexcept {
             const auto addr = reinterpret_cast<uintptr_t>(ptr);
-            const auto start = reinterpret_cast<uintptr_t>(m_buffer);
+            const auto start = reinterpret_cast<uintptr_t>(m_buffer.data());
             const auto end = start + SIZE;
 
             return addr >= start && addr < end;

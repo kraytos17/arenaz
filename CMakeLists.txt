@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.30.0)
+cmake_minimum_required(VERSION 3.30)
 project(arenaz VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -36,17 +36,5 @@ target_include_directories(arenaz
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-add_executable(arenaz_tests
-    ${CATCH_CPP_PATH}
-    src/arena_test.cpp
-    src/freelist_test.cpp
-)
-
-target_include_directories(arenaz_tests
-    PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
-
 enable_testing()
-add_test(NAME AllTests COMMAND arenaz_tests)
+add_subdirectory(tests)

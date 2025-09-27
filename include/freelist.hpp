@@ -224,15 +224,15 @@ namespace arenaz {
                 }
             }
 
-            MemoryPool(MemoryPool&& other) noexcept :
-                memory(std::exchange(other.memory, nullptr)), size(std::exchange(other.size, 0)) {}
+            MemoryPool(MemoryPool&& other) noexcept
+              : memory(std::exchange(other.memory, nullptr)), size(std::exchange(other.size, 0)) {}
 
             MemoryPool& operator=(MemoryPool&& other) noexcept {
                 if (this != &other) {
                     if (memory) {
                         std::free(memory);
                     }
-                    
+
                     memory = std::exchange(other.memory, nullptr);
                     size = std::exchange(other.size, 0);
                 }
@@ -483,8 +483,9 @@ namespace arenaz {
         /**
          * @brief Move constructor
          */
-        FreeListAllocator(FreeListAllocator&& other) noexcept :
-            m_config(other.m_config), m_pools(std::move(other.m_pools)),
+        FreeListAllocator(FreeListAllocator&& other) noexcept
+          : m_config(other.m_config),
+            m_pools(std::move(other.m_pools)),
             m_free_lists(std::move(other.m_free_lists)),
             m_large_allocs(std::move(other.m_large_allocs)),
             m_allocated_bytes(std::exchange(other.m_allocated_bytes, 0)),
