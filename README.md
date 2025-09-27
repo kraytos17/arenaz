@@ -2,66 +2,63 @@
 
 ## Overview
 
-`arenaz` is a C++ project focused on providing various custom memory allocator implementations.  It includes a [FreeListAllocator](include/freelist.hpp) and an [Arena](include/arena.hpp) allocator, designed to offer alternatives to the standard `new` and `delete` operators for specific use cases.  The project uses CMake for building and [Catch2](https://github.com/catchorg/Catch2) for unit testing.
+`arenaz` provides custom memory allocator implementations in C++. It includes:
+- Arena allocator ([include/arena.hpp](include/arena.hpp))
+- Free list allocator ([include/freelist.hpp](include/freelist.hpp))
+- Slab allocator ([include/slab.hpp](include/slab.hpp))
+
+The project uses CMake for building and Catch2 (amalgamated) for unit testing.
 
 ## Features
 
-*   **FreeListAllocator:** A segregated free list allocator that manages memory pools and large allocations, with optional coalescing of free blocks. Defined in [include/freelist.hpp](include/freelist.hpp).
-*   **Arena Allocator:** (Currently only a header file exists - [include/arena.hpp](include/arena.hpp)) Intended to provide a simple and fast arena allocation strategy.
-*   **Customizable Configuration:**  The [FreeListAllocator](include/freelist.hpp) is configurable via the [`AllocatorConfig`](include/freelist.hpp) struct, allowing users to tune the allocator's behavior.
-*   **Comprehensive Unit Tests:**  Uses [Catch2](https://github.com/catchorg/Catch2) for thorough testing of allocator implementations. See [src/freelist_test.cpp](src/freelist_test.cpp) and [src/arena_test.cpp](src/arena_test.cpp).
-*   **Modern C++:**  Written in C++23.
+- Slab Allocator (include/slab.hpp):
+  - Header-only, type-aware slabs sized for T.
+  - Template parameters: ObjectsPerSlab (default 64), MaxCachedEmptySlabs (default 2).
+  - Fast allocate/deallocate, bulk helpers, simple stats(), optional debug poisoning with ARENAZ_DEBUG.
+- FreeListAllocator (include/freelist.hpp):
+  - Segregated free lists with configurable behavior via AllocatorConfig.
+- Arena Allocator (include/arena.hpp):
+  - Bump/linear allocation with fast resets.
+- Tests with Catch2: see [tests/arena_test.cpp](tests/arena_test.cpp) and [tests/freelist_test.cpp](tests/freelist_test.cpp).
+- Modern C++: C++23.
 
-## Building the Project
+## Project Layout
 
-These instructions will guide you through building the project using CMake.
+- include/: Public headers (arena.hpp, freelist.hpp, slab.hpp)
+- src/: App entry point and Catch2 amalgamated files (main.cpp, catch_amalgamated.*)
+- tests/: Unit tests and test CMake configuration
 
-### Prerequisites
+## Building
 
-*   CMake (version 3.30 or higher)
-*   A C++23-compatible compiler (e.g., GCC, Clang)
-*   Make or Ninja build tool
-
-### Steps
-
-1.  **Clone the repository:**
-
-    ```sh
-    git clone <repository_url>
-    cd arenaz
-    ```
-
-2.  **Create a build directory:**
-
-    ```sh
-    mkdir build
-    cd build
-    ```
-
-3.  **Configure the project with CMake:**
-
-    ```sh
-    cmake ..
-    ```
-
-4.  **Build the project:**
-
-    ```sh
-    make # or ninja
-    ```
-
-    This will create the `arenaz` and `arenaz_tests` executables inside the `build` directory.
-
-## Running the Tests
-
-To execute the unit tests, run the `arenaz_tests` executable located in the `build` directory:
+Prerequisites: CMake ≥ 3.30, a C++23 compiler (GCC/Clang), and Make or Ninja.
 
 ```sh
-./arenaz_tests
+git clone <repository_url>
+cd arenaz
+mkdir build && cd build
+cmake ..
+make   # or: ninja
 ```
 
-## Lisence
+This builds:
+- App: build/arenaz
+- Test executables (per file): build/tests/arena_test, build/tests/freelist_test
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+## Running Tests
+
+From the build directory:
+- Using CTest:
+  ```sh
+  ctest --output-on-failure
+  ```
+- Or directly:
+  ```sh
+  ./tests/arena_test
+  ./tests/freelist_test
+  ```
+
+## License
+
+MIT — see LICENSE.
 
 Copyright (c) 2025 Soumil Kumar
