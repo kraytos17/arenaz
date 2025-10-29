@@ -21,30 +21,33 @@ namespace arenaz {
         };
 
         struct Slab {
-            static constexpr size_t slot_size = std::max(sizeof(T), sizeof(FreeNode));
+            static constexpr size_t slot_size =
+                ((std::max(sizeof(T), sizeof(FreeNode)) + alignof(T) - 1) / alignof(T)) *
+                alignof(T);
+
             static constexpr size_t total_bytes = ObjectsPerSlab * slot_size;
 
-            Slab* prev = nullptr;
-            Slab* next = nullptr;
-            FreeNode* free_list = nullptr;
-            size_t free_cnt = 0;
+            Slab* prev{nullptr};
+            Slab* next{nullptr};
+            FreeNode* free_list{nullptr};
+            size_t free_cnt{0};
 
             alignas(T) std::array<std::byte, total_bytes> data;
         };
 
-        Slab* m_partial = nullptr;
-        Slab* m_full = nullptr;
-        Slab* m_empty = nullptr;
+        Slab* m_partial{nullptr};
+        Slab* m_full{nullptr};
+        Slab* m_empty{nullptr};
 
-        size_t m_total_slabs = 0;
-        size_t m_active_slabs = 0;
-        size_t m_live_objects = 0;
-        size_t m_peak_objects = 0;
-        size_t m_cached_empty = 0;
+        size_t m_created_slabs{0};
+        size_t m_active_slabs{0};
+        size_t m_live_objects{0};
+        size_t m_peak_objects{0};
+        size_t m_cached_empty{0};
 
     public:
         struct Stats {
-            size_t total_slabs;
+            size_t created_slabs;
             size_t active_slabs;
             size_t live_objects;
             size_t peak_objects;
@@ -111,9 +114,7 @@ namespace arenaz {
 
             auto* node = reinterpret_cast<FreeNode*>(obj);
 #ifdef ARENAZ_DEBUG
-            std::fill_n(reinterpret_cast<unsigned char*>(node),
-                        std::max(sizeof(T), sizeof(FreeNode)),
-                        0xDD);
+            std::fill_n(reinterpret_cast<unsigned char*>(node), Slab::slot_size, 0xDD);
 #endif
             node->next = slab->free_list;
             slab->free_list = node;
@@ -166,7 +167,7 @@ namespace arenaz {
         }
 
         Stats stats() const noexcept {
-            return Stats{.total_slabs = m_total_slabs,
+            return Stats{.created_slabs = m_created_slabs,
                          .active_slabs = m_active_slabs,
                          .live_objects = m_live_objects,
                          .peak_objects = m_peak_objects};
@@ -178,7 +179,10 @@ namespace arenaz {
         static void attach(Slab*& list, Slab* slab) noexcept {
             slab->prev = nullptr;
             slab->next = list;
-            if (list) list->prev = slab;
+            if (list) {
+                list->prev = slab;
+            }
+
             list = slab;
         }
 
@@ -220,18 +224,16 @@ namespace arenaz {
             slab->free_cnt = ObjectsPerSlab;
             slab->free_list = nullptr;
             for (size_t i = 0; i < ObjectsPerSlab; ++i) {
-                auto* node = reinterpret_cast<FreeNode*>(slab->data.data() +
-                                                         i * std::max(sizeof(T), sizeof(FreeNode)));
+                auto* base = slab->data.data() + i * Slab::slot_size;
+                auto* node = reinterpret_cast<FreeNode*>(base);
 #ifdef ARENAZ_DEBUG
-                std::fill_n(reinterpret_cast<unsigned char*>(node),
-                            std::max(sizeof(T), sizeof(FreeNode)),
-                            0xCD);
+                std::fill_n(reinterpret_cast<unsigned char*>(node), Slab::slot_size, 0xCD);
 #endif
                 node->next = slab->free_list;
                 slab->free_list = node;
             }
 
-            ++m_total_slabs;
+            ++m_created_slabs;
             ++m_active_slabs;
             return slab;
         }
